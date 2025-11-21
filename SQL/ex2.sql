@@ -17,7 +17,7 @@ CREATE TABLE Exchange (
   exchangeCode CHAR(5) PRIMARY KEY,
   exchangeName VARCHAR(100) NOT NULL UNIQUE,
   location VARCHAR(100),
-  description TEXT,
+  description VARCHAR(300),
   currencyCode CHAR(3) NOT NULL,
   FOREIGN KEY (currencyCode) REFERENCES Currency(currencyCode)
 );
@@ -41,10 +41,12 @@ CREATE TABLE User (
   userEmail VARCHAR(100) NOT NULL UNIQUE,
   firstName VARCHAR(50),
   lastName VARCHAR(50),
-  role ENUM('Trader','Admin','Analyst', 'High Risk Trader') DEFAULT 'Trader',
+  role VARCHAR(30) CHECK (role in ('Trader','Admin','Analyst', 'High Risk Trader')),
   createdDate DATE,
   lastLogin DATETIME
 );
+
+DESCRIBE USER;
 
 -- 5. MarketPrice
 CREATE TABLE MarketPrice (
@@ -61,13 +63,14 @@ CREATE TABLE MarketPrice (
   FOREIGN KEY (commodityCode) REFERENCES Commodity(commodityCode),
   FOREIGN KEY (exchangeCode) REFERENCES Exchange(exchangeCode)
 );
+DESCRIBE MarketPrice;
 
 -- 6. Transaction
 CREATE TABLE Transaction (
   transactionNo INT AUTO_INCREMENT PRIMARY KEY,
   transactionDate DATE,
   contractMonth VARCHAR(20),
-  buySell ENUM('Buy','Sell'),
+  buySell VARCHAR(10) CHECK (buySell in('Buy','Sell')),
   quantity INT,
   price DECIMAL(12,2),
   userID INT,
@@ -77,6 +80,7 @@ CREATE TABLE Transaction (
   FOREIGN KEY (userID) REFERENCES User(userID),
   FOREIGN KEY (priceDate, commodityCode, exchangeCode) REFERENCES MarketPrice(priceDate, commodityCode, exchangeCode)
 );
+DESCRIBE Transaction;
 
 -- 7. Position
 CREATE TABLE Position (
@@ -92,7 +96,6 @@ CREATE TABLE Position (
   FOREIGN KEY (commodityCode) REFERENCES Commodity(commodityCode),
   FOREIGN KEY (exchangeCode) REFERENCES Exchange(exchangeCode)
 );
-
 DESCRIBE Position;
 
 -- 8. Breach
@@ -106,3 +109,5 @@ CREATE TABLE Breach (
   FOREIGN KEY (commodityCode, exchangeCode, userID)
     REFERENCES `Position`(commodityCode, exchangeCode, userID)
 );
+
+DESCRIBE Breach;

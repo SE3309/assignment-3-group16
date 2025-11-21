@@ -3,8 +3,8 @@
 
 INSERT INTO Currency (currencyCode, currencyName, price, conversionRate)
 VALUES 
-('USD', 'US Dollar', 1.00, 1.00),
-('CAD', 'Canadian Dollar', 1.00, 0.65);
+('AED', 'United Arab Emirates Dirham', 1.00, 1.70),
+('SAR', 'Saudi Riyal', 1.00, 2.1);
 
 SELECT * FROM Currency;
 
@@ -13,8 +13,8 @@ SELECT * FROM Currency;
 
 INSERT INTO Exchange (exchangeCode, exchangeName, location, description, currencyCode)
 VALUES
-('NYME', 'New York Mercantile Exchange', 'New York, USA', 'Energy commodities exchange', 'USD'),
-('TCE', 'Toronto Commodities Exchange', 'Toronto, Canada', 'Agriculture and metals exchange', 'CAD');
+('QME', 'Qatar Metals Exchange', 'Doha, Qatar', 'Regional exchange specializing in aluminum, steel, and LNG derivatives.', 'AED'),
+('SCE', 'Saudi Commodities Exchange', 'Riyadh, Saudi Arabia', 'Major Saudi exchange specializing in crude oil benchmarks, metals, and agricultural products such as dates.', 'SAR');
 
 SELECT * FROM Exchange;
 
@@ -23,8 +23,8 @@ SELECT * FROM Exchange;
 
 INSERT INTO Commodity (commodityCode, fullName, type, unitOfMeasure, description)
 VALUES
-('COI', 'Crude Oil', 'Energy', 'Barrel', 'Standard Intermediate Crude Oil'),
-('GOL', 'Gold', 'Metal', 'Ounce', 'Standard 24K gold futures contract');
+('LTH', 'Lithium', 'Metal', 'Metric Ton', 'Lithium carbonate used heavily in battery production for electric vehicles and portable electronics.'),
+('COF', 'Coffee', 'Agriculture', 'Pound', 'Arabica coffee futures commonly traded for global beverage and food industries.');
 
 SELECT * FROM Commodity;
 
@@ -53,8 +53,8 @@ SELECT
   e.exchangeCode
 FROM Commodity c
 JOIN Exchange e
-WHERE LOWER(c.fullName) LIKE '%crude oil%'                  
-  AND LOWER(e.location) LIKE '%new york%';
+WHERE LOWER(c.fullName) LIKE '%coffee%'                  
+  AND LOWER(e.location) LIKE '%doha%';
 
 SELECT * FROM MarketPrice;
 
@@ -83,18 +83,21 @@ VALUES (
   CURDATE(),
   'DEC2025',
   'Buy',
-  250,
+  10000,
   (SELECT settlementPrice
      FROM MarketPrice
-     WHERE commodityCode = 'COI'
-       AND exchangeCode = 'NYME'
+     WHERE commodityCode = 'COF'
+       AND exchangeCode = 'QME'
+       AND priceDate <= CURDATE()
      ORDER BY priceDate DESC
      LIMIT 1),
-  1,         -- Trader Sarah
-  'COI',
-  'NYME',
+  1,
+  'COF',
+  'QME',
   CURDATE()
 );
+
+SELECT * FROM Transaction;
 
 -- POSITION INSERTION
 
@@ -196,7 +199,14 @@ SELECT
   p.exchangeCode,
   p.userID
 FROM Position p
-WHERE ABS(p.quantity) > 1000
-   OR p.mtmValue < -50000;  
+WHERE (ABS(p.quantity) > 1000
+   OR p.mtmValue < -50000)  
+   AND NOT EXISTS (
+      SELECT 1
+      FROM Breach b
+      WHERE b.userID = p.userID
+      AND b.commodityCode = p.commodityCode
+      AND b.exchangeCode = p.exchangeCode
+      AND b.resolutionStatus = 'Pending Review');
    
 SELECT * FROM Breach;

@@ -1,23 +1,30 @@
 -- Automatic Breach Resolution
 
-UPDATE Breach b
-JOIN Position p
-  ON b.userID = p.userID
- AND b.commodityCode = p.commodityCode
- AND b.exchangeCode = p.exchangeCode
-SET b.resolutionStatus = 'Auto-Resolved',
-    b.resolutionDate = CURDATE()
-WHERE b.resolutionStatus = 'Pending Review'
-  AND ABS(p.quantity) <= 1000
-  AND p.mtmValue >= -50000;
+UPDATE Breach
+SET resolutionStatus = 'Auto-Resolved'
+WHERE resolutionStatus = 'Pending Review'
+  AND EXISTS (
+        SELECT 1
+        FROM Position p
+        WHERE p.userID = Breach.userID
+          AND p.commodityCode = Breach.commodityCode
+          AND p.exchangeCode = Breach.exchangeCode
+          AND ABS(p.quantity) <= 1000
+          AND p.mtmValue >= -50000
+    );
 
--- Delete a user, their transactions and positions
-DELETE p, t, u
-FROM User u
-LEFT JOIN Position p ON p.userID = u.userID
-LEFT JOIN `Transaction` t ON t.userID = u.userID
-WHERE u.userID = 123;
 
+-- Delete a user's most recent transaction
+DELETE FROM `Transaction`
+WHERE userID = 300
+  AND transactionDate = (
+        SELECT maxDate 
+        FROM (
+            SELECT MAX(transactionDate) AS maxDate
+            FROM `Transaction`
+            WHERE userID = 300
+        ) AS tmp
+    );
 
 -- Identify high risk traders
 
@@ -34,5 +41,11 @@ WHERE userID IN (
 -- Update Users Last Login
 
 UPDATE User
-SET lastLogin = NOW()
+SET lastLogin = CURRENT_TIMESTAMP
 WHERE userID = '1'
+
+-- Update currency conversion
+
+UPDATE Currency 
+SET conversionRate = '0.7'
+WHERE currencyCode='CAD';

@@ -91,14 +91,56 @@ WHERE mp_recent.priceDate = (
 ORDER BY growth DESC
 LIMIT 1;
 
+
 -- Commodities with the Most Price Volatility in the Past 30 Days
 SELECT
     c.fullName AS commodityName,
-    mp.commodityCode,
-    mp.exchangeCode,
-    MAX(mp.settlementPrice) - MIN(mp.settlementPrice) AS priceVolatility
-FROM MarketPrice mp
-WHERE mp.priceDate >= CURDATE() - INTERVAL 30 DAY
-GROUP BY mp.commodityCode, mp.exchangeCode
-ORDER BY priceVolatility DESC
+    v.commodityCode,
+    v.maxVolatility
+FROM (
+    SELECT
+        perExchange.commodityCode,
+        MAX(perExchange.volatility) AS maxVolatility
+    FROM (
+        SELECT
+            mp.commodityCode,
+            mp.exchangeCode,
+            MAX(mp.settlementPrice) - MIN(mp.settlementPrice) AS volatility
+        FROM MarketPrice mp
+        WHERE mp.priceDate >= CURRENT_DATE - INTERVAL 30 DAY
+        GROUP BY mp.commodityCode, mp.exchangeCode
+    ) AS perExchange
+    GROUP BY perExchange.commodityCode
+) AS v
+JOIN Commodity c
+    ON v.commodityCode = c.commodityCode
+ORDER BY v.maxVolatility DESC
 LIMIT 10;
+
+
+
+-- Convert all of a user's active positions to a currency of their choice
+SELECT
+    u.userID,
+    u.firstName,
+    u.lastName,
+    p.commodityCode,
+    c.fullName AS commodityName,
+    p.exchangeCode,
+    e.exchangeName,
+    ROUND((p.mtmValue * ec.conversionRate),2) AS mtmUSD,
+    ROUND(
+        (p.mtmValue * ec.conversionRate) /
+        (SELECT conversionRate FROM Currency WHERE currencyCode = 'CAD'),2) AS mtmCAD
+FROM Position p
+JOIN User u 
+    ON p.userID = u.userID
+JOIN Commodity c 
+    ON p.commodityCode = c.commodityCode
+JOIN Exchange e 
+    ON p.exchangeCode = e.exchangeCode
+JOIN Currency ec 
+    ON e.currencyCode = ec.currencyCode
+WHERE u.userID = 1 
+ORDER BY mtmCAD DESC;
+
