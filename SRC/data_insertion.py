@@ -19,13 +19,13 @@ connection = mysql.connector.connect(
 
 cursor = connection.cursor(dictionary=True)
 
-cursor.execute('DELETE FROM Position')
-cursor.execute('DELETE FROM `Transaction`')
-cursor.execute('DELETE FROM MarketPrice')
-cursor.execute('DELETE FROM Exchange')
-cursor.execute('DELETE FROM Commodity')
-cursor.execute('DELETE FROM Currency')
-cursor.execute("DELETE FROM User")
+# cursor.execute('DELETE FROM Position')
+# cursor.execute('DELETE FROM `Transaction`')
+# cursor.execute('DELETE FROM MarketPrice')
+# cursor.execute('DELETE FROM Exchange')
+# cursor.execute('DELETE FROM Commodity')
+# cursor.execute('DELETE FROM Currency')
+# cursor.execute("DELETE FROM User")
 
 connection.commit()
 
@@ -293,8 +293,15 @@ SELECT
   p.exchangeCode,
   p.userID
 FROM Position p
-WHERE ABS(p.quantity) > 1000
-   OR p.mtmValue < -50000;  
+WHERE (ABS(p.quantity) > 1000
+   OR p.mtmValue < -50000)  
+   AND NOT EXISTS (
+      SELECT 1
+      FROM Breach b
+      WHERE b.userID = p.userID
+      AND b.commodityCode = p.commodityCode
+      AND b.exchangeCode = p.exchangeCode
+      AND b.resolutionStatus = 'Pending Review');
 """
 
 cursor.execute(sql_command)
